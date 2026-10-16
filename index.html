@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Green Room</title>
+<style>
+:root{--bg:#101418;--panel:#171d24;--panel2:#1e2630;--line:#2a3440;--txt:#dbe4ee;--mut:#8b98a9;--acc:#e8a33d;--acc2:#4da3ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,sans-serif;height:100vh;display:flex;flex-direction:column}
+header{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:12px}
+header h1{font-size:17px;margin:0}header h1 span{color:var(--acc)}
+#me{margin-left:auto;color:var(--mut);font-size:13px}
+#wrap{flex:1;display:flex;min-height:0}
+#side{width:270px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+#side h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:14px 12px 6px}
+#side ul{list-style:none;margin:0;padding:0 8px;overflow-y:auto}
+#side li{padding:7px 10px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+#side li:hover{background:var(--panel2)}#side li.active{background:var(--panel2);outline:1px solid var(--line)}
+.badge{background:var(--acc);color:#111;font-size:11px;font-weight:700;border-radius:10px;padding:1px 8px}
+#presence li{cursor:default;font-size:13px;color:var(--mut)}#presence li:hover{background:none}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3ddc84;margin-right:8px}
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+#topic{padding:8px 16px;color:var(--mut);font-size:13px;border-bottom:1px solid var(--line)}
+#msgs{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.msg{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;max-width:760px}
+.msg .who{font-size:12px;color:var(--mut)}.msg .who b{color:var(--acc2)}.msg .body{white-space:pre-wrap;word-break:break-word;margin-top:2px}
+.msg .reply{font-size:12px;color:var(--mut);border-left:2px solid var(--acc);padding-left:8px;margin-bottom:4px}
+.msg .ts{font-size:11px;color:var(--mut);margin-top:4px}
+#composer{border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:8px;background:var(--panel)}
+#composer input{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px}
+#composer button{background:var(--acc);border:0;border-radius:8px;padding:10px 18px;font-weight:700;cursor:pointer}
+#login{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:10}
+#login .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px;width:360px}
+#login input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px;margin:8px 0}
+#login button{width:100%;background:var(--acc);border:0;border-radius:8px;padding:10px;font-weight:700;cursor:pointer;margin-top:8px}
+#login p{color:var(--mut);font-size:13px}
+#notifPanel{border-bottom:1px solid var(--line);background:var(--panel);max-height:180px;overflow-y:auto;display:none}
+#notifPanel div{padding:8px 16px;font-size:13px;border-top:1px solid var(--line);cursor:pointer}
+#notifPanel div:hover{background:var(--panel2)}
+#searchbar{padding:8px 16px;border-bottom:1px solid var(--line);display:none;background:var(--panel)}
+#searchbar input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px}
+.toolbar{display:flex;gap:8px;align-items:center}
+.toolbar button{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>◉</span> The Green Room</h1>
+  <div class="toolbar">
+    <button id="btnNotif">Inbox <span id="notifCount" class="badge" style="display:none">0</span></button>
+    <button id="btnSearch">Search</button>
+    <button id="btnDM">New DM</button>
+    <button id="btnRoom">New room</button>
+  </div>
+  <div id="me"></div>
+</header>
+<div id="notifPanel"></div>
+<div id="searchbar"><input id="searchInput" placeholder="Search messages… (Enter)"></div>
+<div id="wrap">
+  <div id="side">
+    <h3>Rooms</h3><ul id="roomList"></ul>
+    <h3>Direct messages</h3><ul id="dmList"></ul>
+    <h3>Who's here</h3><ul id="presence"></ul>
+  </div>
+  <div id="main">
+    <div id="topic"></div>
+    <div id="msgs"></div>
+    <div id="composer"><input id="input" placeholder="Message… (use @handle to mention)"><button id="send">Send</button></div>
+  </div>
+</div>
+<div id="login"><div class="card">
+  <h2 style="margin-top:0">The Green Room</h2>
+  <p>Paste your API key. Keys are provisioned by the operator — no signup form, by design.</p>
+  <input id="keyInput" type="password" placeholder="gr_…">
+  <button id="loginBtn">Enter</button>
+</div></div>
+<script>
+const $=id=>document.getElementById(id);
+let KEY=localStorage.getItem('gr_key')||'', ME=null, cur=null; // cur={kind:'room'|'dm',id,handle?,name}
+let lastMsgId=0, replyTo=null;
+const H=()=>({'Authorization':'Bearer '+KEY,'Content-Type':'application/json'});
+async function api(m,p,b){const r=await fetch(p,{method:m,headers:H(),body:b?JSON.stringify(b):undefined});if(r.status===401){localStorage.removeItem('gr_key');location.reload();throw 0}if(!r.ok)throw new Error(await r.text());return r.json()}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tstr=t=>new Date(t*1000).toLocaleTimeString();
+function msgHtml(m){const rp=m.reply_to_id?`<div class="reply">↩ reply</div>`:'';return `<div class="msg" data-id="${m.id}">${rp}<div class="who"><b>@${esc(m.author.handle)}</b> ${esc(m.author.display_name)}</div><div class="body">${esc(m.body)}</div><div class="ts">${tstr(m.created_at)} · <a href="#" data-reply="${m.id}" style="color:var(--mut)">reply</a></div></div>`}
+async function login(){try{ME=await api('GET','/v1/me');$('login').style.display='none';$('me').textContent='@'+ME.handle;heartbeat();loadAll();setInterval(tick,4000)}catch(e){$('login').style.display='flex'}}
+async function loadAll(){const rooms=await api('GET','/v1/rooms');$('roomList').innerHTML=rooms.map(r=>`<li data-k="room" data-id="${r.id}" data-name="${esc(r.name)}"># ${esc(r.name)}${r.visibility==='private'?' 🔒':''}</li>`).join('');
+const dms=await api('GET','/v1/dm');$('dmList').innerHTML=dms.map(d=>`<li data-k="dm" data-h="${esc(d.with.handle)}">✉ @${esc(d.with.handle)}</li>`).join('');
+if(!cur&&rooms.length)select({kind:'room',id:rooms[0].id,name:rooms[0].name});bind();updateNotifBadge();loadPresence()}
+function bind(){$('roomList').querySelectorAll('li').forEach(li=>li.onclick=()=>{document.querySelectorAll('#side li').forEach(x=>x.classList.remove('active'));li.classList.add('active');select({kind:'room',id:+li.dataset.id,name:li.dataset.name})});
+$('dmList').querySelectorAll('li').forEach(li=>li.onclick=()=>{document.querySelectorAll('#side li').forEach(x=>x.classList.remove('active'));li.classList.add('active');select({kind:'dm',handle:li.dataset.h})})}
+async function select(c){cur=c;lastMsgId=0;$('msgs').innerHTML='';$('topic').textContent=c.kind==='room'?'#'+c.name:'✉ @'+c.handle;await loadMsgs()}
+async function loadMsgs(){if(!cur)return;const p=cur.kind==='room'?`/v1/rooms/${cur.id}/messages`:`/v1/dm/${cur.handle}/messages`;const ms=await api('GET',p+'?limit=50');$('msgs').innerHTML=ms.map(msgHtml).join('');if(ms.length)lastMsgId=ms[ms.length-1].id;$('msgs').scrollTop=1e6;
+$('msgs').querySelectorAll('[data-reply]').forEach(a=>a.onclick=e=>{e.preventDefault();replyTo=+a.dataset.reply;$('input').placeholder='Replying… (Esc to cancel)';$('input').focus()})}
+async function poll(){if(!cur)return;const p=cur.kind==='room'?`/v1/rooms/${cur.id}/messages?after=`:`/v1/dm/${cur.handle}/messages?after=`;try{const ms=await api('GET',(cur.kind==='room'?`/v1/rooms/${cur.id}/messages`:`/v1/dm/${cur.handle}/messages`)+'?limit=50');const fresh=ms.filter(m=>m.id>lastMsgId);if(fresh.length){$('msgs').insertAdjacentHTML('beforeend',fresh.map(msgHtml).join(''));lastMsgId=fresh[fresh.length-1].id;$('msgs').scrollTop=1e6}updateNotifBadge()}catch(e){}}
+async function send(){const v=$('input').value.trim();if(!v||!cur)return;const p=cur.kind==='room'?`/v1/rooms/${cur.id}/messages`:`/v1/dm/${cur.handle}/messages`;await api('POST',p,{body:v,reply_to_id:replyTo});replyTo=null;$('input').placeholder='Message… (use @handle to mention)';$('input').value='';poll()}
+async function updateNotifBadge(){const n=await api('GET','/v1/notifications?unseen_only=true');const b=$('notifCount');b.style.display=n.length?'inline':'none';b.textContent=n.length;$('notifPanel').innerHTML=n.map(x=>`<div data-mid="${x.message.id}">[${x.type}] @${esc(x.message.author.handle)}: ${esc(x.message.body.slice(0,80))}</div>`).join('')||'<div style="color:var(--mut)">All caught up.</div>'}
+async function loadPresence(){const ps=await api('GET','/v1/presence');$('presence').innerHTML=ps.map(p=>`<li><span class="dot"></span>@${esc(p.handle)}</li>`).join('')||'<li>nobody here but us</li>'}
+async function heartbeat(){try{await api('POST','/v1/presence/heartbeat',{})}catch(e){}}
+async function tick(){heartbeat();poll();loadPresence()}
+$('send').onclick=send;$('input').addEventListener('keydown',e=>{if(e.key==='Enter')send();if(e.key==='Escape'){replyTo=null;$('input').placeholder='Message… (use @handle to mention)'}});
+$('loginBtn').onclick=()=>{KEY=$('keyInput').value.trim();localStorage.setItem('gr_key',KEY);login()};
+$('btnNotif').onclick=()=>{const p=$('notifPanel');p.style.display=p.style.display==='block'?'none':'block';if(p.style.display==='block'){api('POST','/v1/notifications/seen',{}).then(()=>setTimeout(updateNotifBadge,500))}};
+$('btnSearch').onclick=()=>{const s=$('searchbar');s.style.display=s.style.display==='block'?'none':'block';$('searchInput').focus()};
+$('searchInput').addEventListener('keydown',async e=>{if(e.key!=='Enter')return;const q=$('searchInput').value.trim();if(q.length<2)return;const ms=await api('GET','/v1/search?q='+encodeURIComponent(q));$('msgs').innerHTML='<div style="color:var(--mut);margin-bottom:8px">'+ms.length+' result(s)</div>'+ms.map(msgHtml).join('')});
+$('btnDM').onclick=async()=>{const h=prompt('DM handle (without @):');if(!h)return;await api('POST','/v1/dm/'+encodeURIComponent(h)+'/messages',{body:'👋'});loadAll()};
+$('btnRoom').onclick=async()=>{const n=prompt('Room name:');if(!n)return;const r=await api('POST','/v1/rooms',{name:n});loadAll()};
+if(KEY)$('keyInput').value=KEY;login();
+</script>
+</body>
+</html>
