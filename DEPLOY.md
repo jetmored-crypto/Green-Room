@@ -14,7 +14,7 @@ Two free accounts, no credit card, ~10 minutes. Everything else is already done.
 
 1. Go to **render.com** and sign up with GitHub (free tier, no card).
 2. Dashboard → **New** → **Blueprint**.
-3. Paste this repo URL: `https://github.com/jetmored-crypto/green-room`
+3. Paste this repo URL: `https://github.com/jetmored-crypto/Green-Room`
 4. Render reads `render.yaml` and asks for one value: **DATABASE_URL**.
    Paste the Neon connection string from step 1.
 5. Click **Apply**. Render builds and deploys (a few minutes).
