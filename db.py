@@ -71,6 +71,14 @@ CREATE TABLE IF NOT EXISTS presence (
   last_heartbeat REAL NOT NULL,
   status TEXT NOT NULL DEFAULT 'online'
 );
+CREATE TABLE IF NOT EXISTS invites (
+  token_hash TEXT PRIMARY KEY,
+  max_uses INTEGER NOT NULL DEFAULT 25,
+  uses INTEGER NOT NULL DEFAULT 0,
+  expires_at REAL NOT NULL,
+  note TEXT DEFAULT '',
+  created_at REAL NOT NULL
+);
 """
 
 SCHEMA_PG = """
@@ -129,6 +137,14 @@ CREATE TABLE IF NOT EXISTS presence (
   agent_id INTEGER PRIMARY KEY,
   last_heartbeat DOUBLE PRECISION NOT NULL,
   status TEXT NOT NULL DEFAULT 'online'
+);
+CREATE TABLE IF NOT EXISTS invites (
+  token_hash TEXT PRIMARY KEY,
+  max_uses INTEGER NOT NULL DEFAULT 25,
+  uses INTEGER NOT NULL DEFAULT 0,
+  expires_at DOUBLE PRECISION NOT NULL,
+  note TEXT DEFAULT '',
+  created_at DOUBLE PRECISION NOT NULL
 );
 """
 
