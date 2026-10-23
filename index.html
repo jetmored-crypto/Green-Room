@@ -24,7 +24,7 @@ header h1{font-size:17px;margin:0}header h1 span{color:var(--acc)}
 #msgs{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
 .msg{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;max-width:760px}
 .msg .who{font-size:12px;color:var(--mut)}.msg .who b{color:var(--acc2)}.msg .body{white-space:pre-wrap;word-break:break-word;margin-top:2px}
-.msg .reply{font-size:12px;color:var(--mut);border-left:2px solid var(--acc);padding-left:8px;margin-bottom:4px}
+.msg .reply{font-size:12px;color:var(--mut);border-left:2px solid var(--acc);padding-left:8px;margin-bottom:4px;cursor:pointer}
 .msg .ts{font-size:11px;color:var(--mut);margin-top:4px}.msg .ts a{padding:6px 10px;margin-left:2px;display:inline-block}
 #composer{border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:8px;background:var(--panel)}
 #composer input{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px}
@@ -78,12 +78,12 @@ header h1{font-size:17px;margin:0}header h1 span{color:var(--acc)}
 <script>
 const $=id=>document.getElementById(id);
 let KEY=localStorage.getItem('gr_key')||'', ME=null, cur=null; // cur={kind:'room'|'dm',id,handle?,name}
-let lastMsgId=0, replyTo=null;
+let lastMsgId=0, replyTo=null;const byId=new Map();
 const H=()=>({'Authorization':'Bearer '+KEY,'Content-Type':'application/json'});
 async function api(m,p,b){const r=await fetch(p,{method:m,headers:H(),body:b?JSON.stringify(b):undefined});if(r.status===401){localStorage.removeItem('gr_key');location.reload();throw 0}if(!r.ok)throw new Error(await r.text());return r.json()}
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tstr=t=>new Date(t*1000).toLocaleTimeString();
-function msgHtml(m){const rp=m.reply_to_id?`<div class="reply">↩ reply</div>`:'';return `<div class="msg" data-id="${m.id}">${rp}<div class="who"><b>@${esc(m.author.handle)}</b> ${esc(m.author.display_name)}</div><div class="body">${esc(m.body)}</div><div class="ts">${tstr(m.created_at)} · <a href="#" data-reply="${m.id}" style="color:var(--mut)">reply</a></div></div>`}
+function msgHtml(m){byId.set(m.id,m);let rp='';if(m.reply_to_id){const par=byId.get(m.reply_to_id);rp=par?`<div class="reply" data-jump="${par.id}">↩ <b>@${esc(par.author.handle)}</b>: ${esc(par.body.slice(0,90))}${par.body.length>90?'…':''}</div>`:`<div class="reply" data-jump="${m.reply_to_id}">↩ reply to #${m.reply_to_id}</div>`}return `<div class="msg" data-id="${m.id}">${rp}<div class="who"><b>@${esc(m.author.handle)}</b> ${esc(m.author.display_name)}</div><div class="body">${esc(m.body)}</div><div class="ts">${tstr(m.created_at)} · <a href="#" data-reply="${m.id}" style="color:var(--mut)">reply</a></div></div>`}
 async function login(){try{ME=await api('GET','/v1/me');$('login').style.display='none';$('me').textContent='@'+ME.handle;heartbeat();loadAll();setInterval(tick,4000)}catch(e){$('login').style.display='flex'}}
 async function loadAll(){const rooms=await api('GET','/v1/rooms');$('roomList').innerHTML=rooms.map(r=>`<li data-k="room" data-id="${r.id}" data-name="${esc(r.name)}"># ${esc(r.name)}${r.visibility==='private'?' 🔒':''}</li>`).join('');
 const dms=await api('GET','/v1/dm');$('dmList').innerHTML=dms.map(d=>`<li data-k="dm" data-h="${esc(d.with.handle)}">✉ @${esc(d.with.handle)}</li>`).join('');
@@ -101,7 +101,7 @@ async function heartbeat(){try{await api('POST','/v1/presence/heartbeat',{})}cat
 async function tick(){heartbeat();poll();loadPresence()}
 function setReply(id){replyTo=id;const b=$('replybar');b.textContent='\u21a9 Replying to message #'+id+' \u2014 tap here to cancel';b.style.display='block';$('input').focus()}
 function clearReply(){replyTo=null;$('replybar').style.display='none'}
-$('msgs').addEventListener('click',e=>{const a=e.target.closest('[data-reply]');if(!a)return;e.preventDefault();setReply(+a.dataset.reply)});
+$('msgs').addEventListener('click',e=>{const j=e.target.closest('[data-jump]');if(j){const t=$('msgs').querySelector('.msg[data-id="'+j.dataset.jump+'"]');if(t){t.scrollIntoView({block:'center'});t.style.outline='2px solid var(--acc)';setTimeout(()=>t.style.outline='',1600)}return}const a=e.target.closest('[data-reply]');if(!a)return;e.preventDefault();setReply(+a.dataset.reply)});
 $('replybar').onclick=clearReply;
 $('send').onclick=send;$('input').addEventListener('keydown',e=>{if(e.key==='Enter')send();if(e.key==='Escape')clearReply()});
 $('loginBtn').onclick=()=>{KEY=$('keyInput').value.trim();localStorage.setItem('gr_key',KEY);login()};
